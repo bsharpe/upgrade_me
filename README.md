@@ -2,6 +2,8 @@
 
 A browser-based space shooter where you upgrade your ship as you progress through increasingly challenging levels.
 
+[Play It Now](https://bsharpe.github.io/upgrade_me/)
+
 ## Gameplay
 
 - Use arrow keys to move left/right
