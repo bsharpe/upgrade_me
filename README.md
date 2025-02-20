@@ -2,6 +2,8 @@
 
 A classic arcade-style space shooter game where you pilot a spaceship, destroy enemies, and upgrade your capabilities between levels.
 
+Made with Cursor and Claude in about 20 minutes.
+
 ## Game Features
 
 - **Progressive Difficulty**: Each level adds more enemies and increases their speed
