@@ -55,12 +55,30 @@ window.addEventListener('keyup', (e) => keys[e.key] = false);
 
 // Spawn a single enemy
 function spawnEnemy() {
+  // Increase fast enemy chance with level (15% base + 2% per level, max 50%)
+  const fastEnemyChance = Math.min(0.15 + (level - 1) * 0.02, 0.5);
+  const isFastEnemy = Math.random() < fastEnemyChance;
+
+  // Increase wave motion chance with level (50% base + 5% per level for fast enemies, max 80%)
+  const waveMotionChance = Math.min(0.5 + (level - 1) * 0.05, 0.8);
+  const hasWaveMotion = isFastEnemy && graphicsLevel === 3 && Math.random() < waveMotionChance;
+
   enemies.push({
     x: Math.random() * (canvas.width - 20),
     y: -20,
-    width: 20,
-    height: 20,
-    speed: 1 + level * 0.5
+    width: isFastEnemy ? 16 : 20,
+    height: isFastEnemy ? 16 : 20,
+    speed: (1 + level * 0.5) * (isFastEnemy ? 1.8 : 1),
+    rotationAngle: 0,
+    rotationSpeed: (Math.random() - 0.5) * (isFastEnemy ? 0.15 : 0.1),
+    isFastEnemy: isFastEnemy,
+    hasWaveMotion: hasWaveMotion,
+    waveAmplitude: hasWaveMotion ? 30 + Math.random() * 20 : 0,
+    waveFrequency: hasWaveMotion ? 0.05 + Math.random() * 0.03 : 0,
+    initialX: Math.random() * (canvas.width - 20),
+    distanceTraveled: 0,
+    // Points value based on enemy type
+    pointValue: hasWaveMotion ? 30 : isFastEnemy ? 20 : 10
   });
   spawnedEnemies++;
 }
@@ -173,43 +191,60 @@ function drawBullets() {
 }
 
 function drawEnemies() {
-  ctx.fillStyle = graphicsLevel === 1 ? 'red' : graphicsLevel === 2 ? 'orange' : 'purple';
-  enemies.forEach(enemy => ctx.fillRect(enemy.x - enemy.width / 2, enemy.y - enemy.height / 2, enemy.width, enemy.height));
+  enemies.forEach(enemy => {
+    ctx.save();
+    ctx.translate(enemy.x, enemy.y);
+
+    if (graphicsLevel >= 2) {
+      ctx.rotate(enemy.rotationAngle);
+    }
+
+    // Different colors for fast enemies
+    const color = graphicsLevel === 1 ? (enemy.isFastEnemy ? '#ff6666' : 'red') :
+      graphicsLevel === 2 ? (enemy.isFastEnemy ? '#ffd700' : 'orange') :
+        (enemy.isFastEnemy ? '#ff00ff' : 'purple');
+    ctx.fillStyle = color;
+    ctx.fillRect(-enemy.width / 2, -enemy.height / 2, enemy.width, enemy.height);
+
+    ctx.restore();
+  });
 }
 
 function drawExplosions() {
-  // Only draw explosions if graphics level is above 1
   if (graphicsLevel === 1) return;
 
   explosions = explosions.filter(exp => exp.frame < exp.maxFrames);
 
   explosions.forEach(exp => {
     const opacity = 1 - (exp.frame / exp.maxFrames);
+    const scale = exp.scale || 1;
 
     if (graphicsLevel === 2) {
       // Orange/yellow explosion with multiple circles
-      const colors = [`rgba(255, 200, 0, ${opacity})`, `rgba(255, 100, 0, ${opacity})`];
+      const colors = exp.isFinal ?
+        [`rgba(255, 200, 0, ${opacity})`, `rgba(255, 100, 0, ${opacity})`, `rgba(255, 50, 0, ${opacity})`] :
+        [`rgba(255, 200, 0, ${opacity})`, `rgba(255, 100, 0, ${opacity})`];
+
       colors.forEach((color, i) => {
         ctx.fillStyle = color;
         ctx.beginPath();
-        // Ensure radius is always positive
-        const radius = Math.max(0, exp.frame * 2 - i * 3);
+        const radius = Math.max(0, exp.frame * 2 - i * 3) * scale;
         ctx.arc(exp.x, exp.y, radius, 0, Math.PI * 2);
         ctx.fill();
       });
     } else {
       // Complex particle-based explosion
-      const particles = 8;
+      const particles = exp.isFinal ? 12 : 8;
       const angle = (Math.PI * 2) / particles;
       ctx.fillStyle = `rgba(255, ${100 + exp.frame * 10}, 0, ${opacity})`;
 
       for (let i = 0; i < particles; i++) {
-        const radius = exp.frame * 2;
+        const radius = exp.frame * 2 * scale;
         const particleX = exp.x + Math.cos(angle * i) * radius;
         const particleY = exp.y + Math.sin(angle * i) * radius;
 
         ctx.beginPath();
-        ctx.arc(particleX, particleY, 3, 0, Math.PI * 2);
+        ctx.arc(particleX, particleY, 3 * scale, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -261,11 +296,11 @@ function drawUI() {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
   ctx.fillRect(barX, barY, barWidth, barHeight);
 
-  // Calculate and draw progress - now based on defeated enemies
+  // Calculate and draw progress - now with goldenrod color
   const defeatedEnemies = spawnedEnemies - enemies.length;
   const progress = defeatedEnemies / enemyCount;
   const progressWidth = barWidth * Math.min(progress, 1);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.fillStyle = 'goldenrod';  // Changed from rgba(255, 255, 255, 0.8)
   ctx.fillRect(barX, barY, progressWidth, barHeight);
 
   // Draw border
@@ -282,7 +317,33 @@ function drawUI() {
 
 // Update game state
 function update() {
-  if (gameOver || upgradeMenuActive) return;
+  if (gameOver || upgradeMenuActive) {
+    // Handle enemy movement during game over sequence
+    if (gameOverSequence) {
+      enemies.forEach(enemy => {
+        // Update existing dramatic exit velocities
+        enemy.x += enemy.xSpeed;
+        enemy.y += enemy.ySpeed;
+        enemy.ySpeed += 0.2; // Gravity effect
+        enemy.rotationAngle = (enemy.rotationAngle || 0) + enemy.rotation;
+
+        // Also add upward movement
+        enemy.y -= 3; // Consistent upward movement
+      });
+
+      // Remove enemies that are off screen
+      enemies = enemies.filter(enemy =>
+        enemy.y > -100 && // Changed to allow upward exit
+        enemy.x > -100 &&
+        enemy.x < canvas.width + 100
+      );
+
+      if (enemies.length === 0) {
+        gameOverSequence = false;
+      }
+    }
+    return;
+  }
 
   // Spawn enemies over time
   if (spawnedEnemies < enemyCount && Date.now() >= nextSpawnTime) {
@@ -309,8 +370,22 @@ function update() {
   bullets = bullets.filter(b => b.y > 0);
   bullets.forEach(b => b.y -= 5);
 
-  // Enemy movement
-  enemies.forEach(e => e.y += e.speed);
+  // Enemy movement and rotation
+  enemies.forEach(e => {
+    e.y += e.speed;
+    if (graphicsLevel >= 2) {
+      e.rotationAngle = (e.rotationAngle + e.rotationSpeed) % (Math.PI * 2);
+    }
+
+    // Add wave motion for eligible enemies
+    if (e.hasWaveMotion) {
+      e.distanceTraveled += e.speed;
+      e.x = e.initialX + Math.sin(e.distanceTraveled * e.waveFrequency) * e.waveAmplitude;
+
+      // Keep within screen bounds
+      e.x = Math.max(e.width, Math.min(canvas.width - e.width, e.x));
+    }
+  });
   enemies = enemies.filter(e => e.y < canvas.height + e.height);
 
   // Collision detection
@@ -318,7 +393,6 @@ function update() {
     enemies.forEach((enemy, eIndex) => {
       if (bullet.x > enemy.x - enemy.width / 2 && bullet.x < enemy.x + enemy.width / 2 &&
         bullet.y > enemy.y - enemy.height / 2 && bullet.y < enemy.y + enemy.height / 2) {
-        // Only add explosion effect if graphics level > 1
         if (graphicsLevel > 1) {
           explosions.push({
             x: enemy.x,
@@ -330,7 +404,7 @@ function update() {
 
         enemies.splice(eIndex, 1);
         bullets.splice(bIndex, 1);
-        points += 10;
+        points += enemy.pointValue; // Use enemy's point value instead of fixed 10
       }
     });
   });
@@ -339,11 +413,14 @@ function update() {
     if (enemy.x > player.x - player.width / 2 && enemy.x < player.x + player.width / 2 &&
       enemy.y > player.y - player.height / 2 && enemy.y < player.y + player.height / 2) {
       if (graphicsLevel > 1) {
+        // Make final explosion bigger and longer
         explosions.push({
           x: player.x,
           y: player.y,
           frame: 0,
-          maxFrames: graphicsLevel === 2 ? 20 : 25
+          maxFrames: graphicsLevel === 2 ? 30 : 40,
+          isFinal: true, // Mark as final explosion
+          scale: 2 // Bigger explosion
         });
       }
 
@@ -352,10 +429,13 @@ function update() {
       if (player.lives <= 0) {
         gameOver = true;
         gameOverSequence = true;
-        // Assign random horizontal velocities to remaining enemies
-        enemies.forEach(e => {
-          e.xSpeed = (Math.random() - 0.5) * 8; // Random speed between -4 and 4
-          e.ySpeed = -e.speed; // Reverse vertical direction
+        player.destroyed = true; // Mark player as destroyed
+        // Set up dramatic exit velocities for ALL enemies
+        enemies.forEach(enemy => {
+          enemy.xSpeed = (Math.random() - 0.5) * 10;
+          enemy.ySpeed = -Math.random() * 5 - 3;
+          enemy.rotation = (Math.random() - 0.5) * 0.2;
+          enemy.rotationAngle = 0;
         });
       }
     }
@@ -367,58 +447,42 @@ function update() {
     document.getElementById('upgradeMenu').style.display = 'block';
     document.getElementById('pointsDisplay').textContent = points;
   }
-
-  // Modify the update logic to handle game over sequence
-  if (gameOver) {
-    // Continue moving bullets until they're off screen
-    bullets = bullets.filter(b => b.y > -10);
-    bullets.forEach(b => b.y -= 5);
-
-    if (gameOverSequence) {
-      // Move remaining enemies off screen
-      enemies.forEach(enemy => {
-        enemy.x += enemy.xSpeed;
-        enemy.y += enemy.ySpeed;
-      });
-
-      // Remove enemies that are off screen
-      enemies = enemies.filter(enemy =>
-        enemy.x > -50 &&
-        enemy.x < canvas.width + 50 &&
-        enemy.y > -50
-      );
-
-      // End sequence when all enemies are gone
-      if (enemies.length === 0) {
-        gameOverSequence = false;
-      }
-    }
-
-    return; // Skip rest of normal update logic
-  }
 }
 
 // Render loop
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground(); // Stars will always move
+  drawBackground();
 
   if (!gameOver || gameOverSequence) {
-    drawPlayer();
+    if (!player.destroyed) {
+      drawPlayer();
+    }
     drawBullets();
     drawEnemies();
     drawExplosions();
   }
 
-  drawUI();
+  // Always draw UI unless game is completely over
+  if (!gameOver || gameOverSequence) {
+    drawUI();
+  }
 
-  if (gameOver) {
-    // Only show game over text after sequence is complete
-    if (!gameOverSequence) {
-      ctx.fillStyle = 'red';
-      ctx.font = '30px Arial';
-      ctx.fillText('Game Over', canvas.width / 2 - 70, canvas.height / 2);
-    }
+  // Show game over screen only after sequence is complete
+  if (gameOver && !gameOverSequence) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, canvas.height / 2 - 50, canvas.width, 100);
+
+    ctx.fillStyle = '#ff3333';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+
+    ctx.font = '24px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText(`Final Score: ${points}`, canvas.width / 2, canvas.height / 2 + 40);
+
+    ctx.textAlign = 'left';
   }
 
   update();
@@ -427,46 +491,47 @@ function gameLoop() {
 
 // Upgrade functions
 function upgradeSpeed() {
-  if (points >= 10) {
-    points -= 10;
-    player.speed += 1;
-    updatePointsDisplay();
-  }
+  if (!upgradeMenuActive) return;
+
+  player.speed += 1;
+  finishUpgrade();
 }
 
 function upgradeGuns() {
-  if (points >= 15 && player.gunLevel < 4) {
-    points -= 15;
-    player.gunLevel++;
+  if (!upgradeMenuActive || player.gunLevel >= 4) return;
 
+  player.gunLevel++;
+  if (player.gunLevel < 4) {
+    // 10% faster fire rate for levels 2 and 3
+    player.fireRate = Math.floor(player.fireRate * 0.9);
+  }
+
+  // Update the button text to show current level
+  const gunBtn = document.getElementById('upgradeGunsBtn');
+  if (gunBtn) {
     if (player.gunLevel < 4) {
-      // 10% faster fire rate for levels 2 and 3
-      player.fireRate = Math.floor(player.fireRate * 0.9);
-    }
-
-    updatePointsDisplay();
-
-    // Update the button text to show current level
-    const gunBtn = document.getElementById('upgradeGunsBtn');
-    if (gunBtn) {
-      if (player.gunLevel < 4) {
-        gunBtn.textContent = `Upgrade Guns (Level ${player.gunLevel}/4) - 15 pts`;
-      } else {
-        gunBtn.textContent = `Guns Maxed!`;
-      }
+      gunBtn.textContent = `Upgrade Guns (Level ${player.gunLevel}/4)`;
+    } else {
+      gunBtn.textContent = `Guns Maxed!`;
     }
   }
+
+  finishUpgrade();
 }
 
 function upgradeGraphics() {
-  if (points >= 20 && graphicsLevel < 3) {
-    points -= 20;
-    graphicsLevel++;
-    updatePointsDisplay();
-  }
+  if (!upgradeMenuActive || graphicsLevel >= 3) return;
+
+  graphicsLevel++;
+  finishUpgrade();
+}
+
+function finishUpgrade() {
+  startNextLevel();
 }
 
 function updatePointsDisplay() {
+  // This can be removed or kept for score display only
   document.getElementById('pointsDisplay').textContent = points;
 }
 

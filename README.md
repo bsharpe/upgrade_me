@@ -1,48 +1,37 @@
-# Space Shooter Game
+# Upgrade Me - Space Shooter Game
 
-A classic arcade-style space shooter game where you pilot a spaceship, destroy enemies, and upgrade your capabilities between levels.
+A browser-based space shooter where you upgrade your ship as you progress through increasingly challenging levels.
 
-Made with Cursor and Claude in about 20 minutes.
+## Gameplay
 
-[Play It Now](https://bsharpe.github.io/upgrade_me/)
+- Use arrow keys to move left/right
+- Spacebar to shoot
+- Survive waves of enemies and choose upgrades between levels
+- Each level gets progressively harder with more challenging enemies
 
-## Game Features
+### Enemy Types
 
-- **Progressive Difficulty**: Each level adds more enemies and increases their speed
-- **Dynamic Combat**: Maneuver your ship and fire at incoming enemies
-- **Lives System**: Three lives to complete your mission
-- **Upgrade System**: Spend points between levels to enhance your ship:
-  - Speed upgrades
-  - Weapon improvements (up to dual guns)
-  - Enhanced graphics
+- Regular enemies (10 points)
+- Fast enemies (20 points) - Smaller and quicker, more common in higher levels
+- Wave motion enemies (30 points) - Fast enemies that move in sine waves (requires Graphics Level 3)
 
-## Visual Effects
+### Upgrades
 
-- Parallax starfield background with three layers:
-  - Twinkling static stars
-  - Slow-moving stars
-  - Fast-moving stars
-- Three graphics levels with increasingly detailed ships and effects:
-  1. Basic geometric shapes
-  2. Enhanced ship design with wings and engine effects
-  3. Advanced effects including energy fields and particle explosions
+After completing each level, choose one free upgrade:
+- Speed - Increases ship movement speed
+- Guns - Improves weapon system (up to level 4)
+  - Levels 2-3: 10% faster fire rate
+  - Level 4: Double bullets
+- Graphics - Enhances visual effects (up to level 3)
+  - Level 2: Adds rotation, explosions, and enhanced ship design
+  - Level 3: Adds energy fields, engine effects, and wave motion enemies
 
-## Controls
+### Difficulty Scaling
 
-- **Left/Right Arrows**: Move ship
-- **Spacebar**: Fire weapons
-- **Upgrade Menu**: Appears between levels to spend earned points
-
-## Scoring
-
-- 10 points per enemy destroyed
-- Points can be spent on upgrades between levels
-- Progress bar shows completion status for current level
+- Each level adds 5 more enemies
+- Fast enemy chance increases by 2% per level (max 50%)
+- Wave motion chance increases by 5% per level for fast enemies (max 80%)
 
 ## Technical Details
 
-Built using vanilla JavaScript and HTML5 Canvas, featuring:
-- Collision detection
-- Particle effects system
-- Dynamic difficulty scaling
-- State management for game progression 
+Built using vanilla JavaScript and HTML5 Canvas. 

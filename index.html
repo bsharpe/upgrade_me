@@ -19,13 +19,13 @@
 
 <body>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
-  <div id="upgradeMenu">
-    <h2>Upgrade Menu</h2>
-    <p>Points: <span id="pointsDisplay">0</span></p>
-    <button onclick="upgradeSpeed()">Upgrade Speed (10 pts)</button>
-    <button id="upgradeGunsBtn" onclick="upgradeGuns()">Upgrade Guns (Level 1/4) - 15 pts</button>
-    <button onclick="upgradeGraphics()">Upgrade Graphics (20 pts)</button>
-    <button onclick="startNextLevel()">Next Level</button>
+  <div id="upgradeMenu" style="display: none;">
+    <h2>Level Complete!</h2>
+    <p>Score: <span id="pointsDisplay">0</span></p>
+    <p>Choose one upgrade:</p>
+    <button onclick="upgradeSpeed()" id="upgradeSpeedBtn">Increase Speed</button>
+    <button onclick="upgradeGuns()" id="upgradeGunsBtn">Upgrade Guns (Level 1/4)</button>
+    <button onclick="upgradeGraphics()" id="upgradeGraphicsBtn">Upgrade Graphics</button>
   </div>
   <script src="game.js"></script>
 </body>
