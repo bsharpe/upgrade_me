@@ -257,7 +257,14 @@ function drawUI() {
   // Points and level at the top
   ctx.fillStyle = 'white';
   ctx.font = '16px Arial';
-  ctx.fillText(`Points: ${points}  Level: ${level}`, 10, 20);
+  
+  // Score in top left
+  ctx.textAlign = 'left';
+  ctx.fillText(`Score: ${String(points).padStart(2, '0')}`, 10, 20);
+  
+  // Level in top right
+  ctx.textAlign = 'right';
+  ctx.fillText(`Level: ${level}`, canvas.width - 10, 20);
 
   // Draw lives as ships in bottom left
   const shipSpacing = 30;
@@ -296,11 +303,11 @@ function drawUI() {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
   ctx.fillRect(barX, barY, barWidth, barHeight);
 
-  // Calculate and draw progress - now with goldenrod color
+  // Calculate and draw progress
   const defeatedEnemies = spawnedEnemies - enemies.length;
   const progress = defeatedEnemies / enemyCount;
   const progressWidth = barWidth * Math.min(progress, 1);
-  ctx.fillStyle = 'goldenrod';  // Changed from rgba(255, 255, 255, 0.8)
+  ctx.fillStyle = 'goldenrod';
   ctx.fillRect(barX, barY, progressWidth, barHeight);
 
   // Draw border
@@ -308,11 +315,115 @@ function drawUI() {
   ctx.lineWidth = 1;
   ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-  // Draw text
+  // Draw centered percentage text
   ctx.fillStyle = 'white';
   ctx.font = '12px Arial';
+  ctx.textAlign = 'center';
   const percentage = Math.floor(progress * 100);
-  ctx.fillText(`${Math.min(percentage, 100)}%`, barX + barWidth / 2 - 15, barY + barHeight - 2);
+  ctx.fillText(`${Math.min(percentage, 100)}%`, barX + barWidth / 2, barY + barHeight - 2);
+
+  // Draw upgrade menu if active
+  if (upgradeMenuActive) {
+    // Semi-transparent background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, canvas.height / 2 - 100, canvas.width, 160);  // Moved up and centered
+
+    // Level Complete text
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Level Complete!', canvas.width / 2, canvas.height / 2 - 60);
+    
+    // Score
+    ctx.font = '20px Arial';
+    ctx.fillText(`Score: ${points}`, canvas.width / 2, canvas.height / 2 - 30);
+    
+    // Upgrade options
+    ctx.fillText('Choose one upgrade:', canvas.width / 2, canvas.height / 2);
+    
+    // Draw upgrade buttons
+    const buttonY = canvas.height / 2 + 30;  // Adjusted button position
+    const buttonSpacing = 120;
+    drawUpgradeButton('Speed +1', canvas.width / 2 - buttonSpacing, buttonY, () => upgradeSpeed());
+    drawUpgradeButton(`Guns ${player.gunLevel}/4`, canvas.width / 2, buttonY, () => upgradeGuns());
+    drawUpgradeButton('Graphics', canvas.width / 2 + buttonSpacing, buttonY, () => upgradeGraphics());
+  }
+}
+
+function drawUpgradeButton(text, x, y, action) {
+  const buttonWidth = 100;
+  const buttonHeight = 30;
+  const isHovered =
+    mouseX > x - buttonWidth / 2 &&
+    mouseX < x + buttonWidth / 2 &&
+    mouseY > y - buttonHeight / 2 &&
+    mouseY < y + buttonHeight / 2;
+
+  // Button background
+  ctx.fillStyle = isHovered ? '#a76fbf' : '#8a5d9e';
+  ctx.fillRect(x - buttonWidth / 2, y - buttonHeight / 2, buttonWidth, buttonHeight);
+
+  // Button text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '16px Arial';
+  ctx.fillText(text, x, y + 6);
+
+  // Store button data for click handling
+  buttons.push({ x, y, width: buttonWidth, height: buttonHeight, action });
+}
+
+// Add these variables at the top with other game state
+let buttons = [];
+let mouseX = 0;
+let mouseY = 0;
+
+// Add these event listeners after other event listeners
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+});
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  buttons.forEach(button => {
+    if (clickX > button.x - button.width / 2 &&
+      clickX < button.x + button.width / 2 &&
+      clickY > button.y - button.height / 2 &&
+      clickY < button.y + button.height / 2) {
+      button.action();
+    }
+  });
+});
+
+function showLevelNotification() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(224, 224, 224, ' + (1 - levelFadeProgress) + ')';
+  ctx.font = 'bold 48px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Level ${level}`, canvas.width / 2, canvas.height / 2);
+  ctx.restore();
+  
+  if (levelFadeProgress < 1) {
+    levelFadeProgress += 0.01; // Changed from 0.02 to make it fade over ~3 seconds (at 60fps)
+  }
+}
+
+// Add to game state variables at top
+let levelFadeProgress = 0;
+
+function startNextLevel() {
+  level++;
+  levelFadeProgress = 0;  // Reset fade progress
+  enemyCount += 5;
+  enemies = [];
+  spawnedEnemies = 0;
+  nextSpawnTime = Date.now();
+  upgradeMenuActive = false;
+  buttons = []; // Clear buttons
 }
 
 // Update game state
@@ -442,10 +553,9 @@ function update() {
   });
 
   // Level completion
-  if (spawnedEnemies === enemyCount && enemies.length === 0) {
+  if (spawnedEnemies === enemyCount && enemies.length === 0 && !upgradeMenuActive) {
     upgradeMenuActive = true;
-    document.getElementById('upgradeMenu').style.display = 'block';
-    document.getElementById('pointsDisplay').textContent = points;
+    buttons = []; // Clear any existing buttons
   }
 }
 
@@ -485,6 +595,10 @@ function gameLoop() {
     ctx.textAlign = 'left';
   }
 
+  if (levelFadeProgress < 1) {
+    showLevelNotification();
+  }
+
   update();
   requestAnimationFrame(gameLoop);
 }
@@ -506,16 +620,6 @@ function upgradeGuns() {
     player.fireRate = Math.floor(player.fireRate * 0.9);
   }
 
-  // Update the button text to show current level
-  const gunBtn = document.getElementById('upgradeGunsBtn');
-  if (gunBtn) {
-    if (player.gunLevel < 4) {
-      gunBtn.textContent = `Upgrade Guns (Level ${player.gunLevel}/4)`;
-    } else {
-      gunBtn.textContent = `Guns Maxed!`;
-    }
-  }
-
   finishUpgrade();
 }
 
@@ -523,26 +627,12 @@ function upgradeGraphics() {
   if (!upgradeMenuActive || graphicsLevel >= 3) return;
 
   graphicsLevel++;
+  document.body.classList.add('graphics-level-1');
   finishUpgrade();
 }
 
 function finishUpgrade() {
   startNextLevel();
-}
-
-function updatePointsDisplay() {
-  // This can be removed or kept for score display only
-  document.getElementById('pointsDisplay').textContent = points;
-}
-
-function startNextLevel() {
-  level++;
-  enemyCount += 5;
-  enemies = [];
-  spawnedEnemies = 0;
-  nextSpawnTime = Date.now();
-  upgradeMenuActive = false;
-  document.getElementById('upgradeMenu').style.display = 'none';
 }
 
 // Initialize first level
