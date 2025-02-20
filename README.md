@@ -4,6 +4,8 @@ A classic arcade-style space shooter game where you pilot a spaceship, destroy e
 
 Made with Cursor and Claude in about 20 minutes.
 
+[Play It Now](https://bsharpe.github.io/upgrade_me/)
+
 ## Game Features
 
 - **Progressive Difficulty**: Each level adds more enemies and increases their speed
