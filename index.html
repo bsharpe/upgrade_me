@@ -57,12 +57,28 @@
     .graphics-level-1 {
       font-family: Arial, sans-serif;
     }
+
+    #restartButton {
+      margin-top: 10px;
+      background-color: #8a5d9e;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    #restartButton:hover {
+      background-color: #a76fbf;
+    }
   </style>
 </head>
 
 <body>
   <div class="level-notification" id="levelNotification"></div>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <button id="restartButton" onclick="location.reload()">Restart Game</button>
   <script src="game.js"></script>
 </body>
 

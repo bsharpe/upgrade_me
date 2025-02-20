@@ -211,7 +211,22 @@ function drawEnemies() {
 }
 
 function drawExplosions() {
-  if (graphicsLevel === 1) return;
+  if (graphicsLevel === 1) {
+    // For level 1, show "BOOM!" text that fades from yellow to red
+    explosions = explosions.filter(exp => exp.frame < exp.maxFrames);
+    explosions.forEach(exp => {
+      const progress = exp.frame / exp.maxFrames;
+      // Start with yellow (255,255,0) and transition to red (255,0,0)
+      const green = Math.floor(255 * (1 - progress));
+      const opacity = 1 - progress;
+      ctx.fillStyle = `rgba(255, ${green}, 0, ${opacity})`;
+      ctx.font = 'bold 16px Arial';  // Made it bold for better visibility
+      ctx.textAlign = 'center';
+      ctx.fillText('BOOM!', exp.x, exp.y);
+      exp.frame++;
+    });
+    return;
+  }
 
   explosions = explosions.filter(exp => exp.frame < exp.maxFrames);
 
@@ -257,11 +272,11 @@ function drawUI() {
   // Points and level at the top
   ctx.fillStyle = 'white';
   ctx.font = '16px Arial';
-  
+
   // Score in top left
   ctx.textAlign = 'left';
   ctx.fillText(`Score: ${String(points).padStart(2, '0')}`, 10, 20);
-  
+
   // Level in top right
   ctx.textAlign = 'right';
   ctx.fillText(`Level: ${level}`, canvas.width - 10, 20);
@@ -333,14 +348,14 @@ function drawUI() {
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Level Complete!', canvas.width / 2, canvas.height / 2 - 60);
-    
+
     // Score
     ctx.font = '20px Arial';
     ctx.fillText(`Score: ${points}`, canvas.width / 2, canvas.height / 2 - 30);
-    
+
     // Upgrade options
     ctx.fillText('Choose one upgrade:', canvas.width / 2, canvas.height / 2);
-    
+
     // Draw upgrade buttons
     const buttonY = canvas.height / 2 + 30;  // Adjusted button position
     const buttonSpacing = 120;
@@ -406,7 +421,7 @@ function showLevelNotification() {
   ctx.textAlign = 'center';
   ctx.fillText(`Level ${level}`, canvas.width / 2, canvas.height / 2);
   ctx.restore();
-  
+
   if (levelFadeProgress < 1) {
     levelFadeProgress += 0.01; // Changed from 0.02 to make it fade over ~3 seconds (at 60fps)
   }
@@ -504,18 +519,16 @@ function update() {
     enemies.forEach((enemy, eIndex) => {
       if (bullet.x > enemy.x - enemy.width / 2 && bullet.x < enemy.x + enemy.width / 2 &&
         bullet.y > enemy.y - enemy.height / 2 && bullet.y < enemy.y + enemy.height / 2) {
-        if (graphicsLevel > 1) {
-          explosions.push({
-            x: enemy.x,
-            y: enemy.y,
-            frame: 0,
-            maxFrames: graphicsLevel === 2 ? 15 : 20
-          });
-        }
+        explosions.push({
+          x: enemy.x,
+          y: enemy.y,
+          frame: 0,
+          maxFrames: graphicsLevel === 1 ? 30 : graphicsLevel === 2 ? 15 : 20
+        });
 
         enemies.splice(eIndex, 1);
         bullets.splice(bIndex, 1);
-        points += enemy.pointValue; // Use enemy's point value instead of fixed 10
+        points += enemy.pointValue;
       }
     });
   });
@@ -523,17 +536,15 @@ function update() {
   enemies.forEach(enemy => {
     if (enemy.x > player.x - player.width / 2 && enemy.x < player.x + player.width / 2 &&
       enemy.y > player.y - player.height / 2 && enemy.y < player.y + player.height / 2) {
-      if (graphicsLevel > 1) {
-        // Make final explosion bigger and longer
-        explosions.push({
-          x: player.x,
-          y: player.y,
-          frame: 0,
-          maxFrames: graphicsLevel === 2 ? 30 : 40,
-          isFinal: true, // Mark as final explosion
-          scale: 2 // Bigger explosion
-        });
-      }
+      // Make final explosion bigger and longer
+      explosions.push({
+        x: player.x,
+        y: player.y,
+        frame: 0,
+        maxFrames: graphicsLevel === 1 ? 45 : graphicsLevel === 2 ? 30 : 40,
+        isFinal: true,
+        scale: 2
+      });
 
       enemies.splice(enemies.indexOf(enemy), 1);
       player.lives--;
