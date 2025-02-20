@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Upgrade Me</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+    }
+
+    #upgradeMenu {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="upgradeMenu">
+    <h2>Upgrade Menu</h2>
+    <p>Points: <span id="pointsDisplay">0</span></p>
+    <button onclick="upgradeSpeed()">Upgrade Speed (10 pts)</button>
+    <button id="upgradeGunsBtn" onclick="upgradeGuns()">Upgrade Guns (Level 1/4) - 15 pts</button>
+    <button onclick="upgradeGraphics()">Upgrade Graphics (20 pts)</button>
+    <button onclick="startNextLevel()">Next Level</button>
+  </div>
+  <script src="game.js"></script>
+</body>
+
+</html>
